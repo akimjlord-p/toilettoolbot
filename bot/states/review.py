@@ -16,3 +16,6 @@ class ReviewStates(StatesGroup):
 
     # Шаг 3 — комментарий
     comment = State()
+
+    # Шаг 4 — фото (до 3, необязательно)
+    photos = State()

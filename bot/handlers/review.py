@@ -6,6 +6,7 @@ from bot.client import APIClient
 from bot.keyboards.inline import (
     back_button,
     confirm_keyboard,
+    done_photos_keyboard,
     main_menu,
     score_keyboard,
     skip_keyboard,
@@ -250,7 +251,7 @@ async def score_vibe(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(ReviewStates.comment)
     await callback.message.edit_text(
         f"✅ Вайб: <b>{score}/5</b>\n\n"
-        f"💬 <b>Шаг 3 из 3 — Комментарий</b>\n\n"
+        f"💬 <b>Шаг 3 из 4 — Комментарий</b>\n\n"
         f"Напиши что-нибудь об этом туалете или пропусти:",
         reply_markup=skip_keyboard(),
         parse_mode="HTML",
@@ -263,7 +264,7 @@ async def score_vibe(callback: CallbackQuery, state: FSMContext) -> None:
 @router.message(ReviewStates.comment)
 async def process_comment(message: Message, state: FSMContext) -> None:
     await state.update_data(comment=message.text.strip())
-    await _submit_review(message, state)
+    await _ask_photos(message, state)
 
 
 # ── Шаг 5б: комментарий пропущен ─────────────────────────────────────────────
@@ -271,6 +272,51 @@ async def process_comment(message: Message, state: FSMContext) -> None:
 @router.callback_query(F.data == "skip_comment", ReviewStates.comment)
 async def skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(comment=None)
+    await _ask_photos(callback.message, state)
+    await callback.answer()
+
+
+# ── Шаг 6: запрос фото ───────────────────────────────────────────────────────
+
+async def _ask_photos(message: Message, state: FSMContext) -> None:
+    await state.set_state(ReviewStates.photos)
+    await state.update_data(photos=[])
+    await message.answer(
+        "📸 <b>Шаг 4 из 4 — Фото</b> (необязательно)\n\n"
+        "Прикрепи до 3 фотографий этого туалета.\n"
+        "Отправляй по одному — когда закончишь, нажми <b>Готово</b>:",
+        reply_markup=done_photos_keyboard(),
+        parse_mode="HTML",
+    )
+
+
+@router.message(ReviewStates.photos, F.photo)
+async def process_photo(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    photos: list = data.get("photos", [])
+
+    if len(photos) >= 3:
+        await message.answer("⚠️ Максимум 3 фото. Нажми <b>Готово</b>.", parse_mode="HTML")
+        return
+
+    # Берём самое большое разрешение
+    file_id = message.photo[-1].file_id
+    photos.append(file_id)
+    await state.update_data(photos=photos)
+
+    remaining = 3 - len(photos)
+    if remaining > 0:
+        await message.answer(
+            f"✅ Фото {len(photos)}/3 добавлено. Можно ещё {remaining} или нажми <b>Готово</b>:",
+            reply_markup=done_photos_keyboard(),
+            parse_mode="HTML",
+        )
+    else:
+        await message.answer("✅ 3/3 фото добавлено. Нажми <b>Готово</b>:", reply_markup=done_photos_keyboard(), parse_mode="HTML")
+
+
+@router.callback_query(F.data == "photos_done", ReviewStates.photos)
+async def photos_done(callback: CallbackQuery, state: FSMContext) -> None:
     await _submit_review(callback.message, state, user_id=callback.from_user.id, username=callback.from_user.username)
     await callback.answer()
 
@@ -298,6 +344,7 @@ async def _submit_review(
             score_privacy=data["score_privacy"],
             score_vibe=data["score_vibe"],
             comment=data.get("comment"),
+            photos=data.get("photos", []),
         )
     except RuntimeError as e:
         await message.answer(f"⚠️ Не удалось сохранить отзыв: {e}")

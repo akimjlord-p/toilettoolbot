@@ -53,10 +53,18 @@ def confirm_keyboard(yes_data: str, no_data: str = "cancel") -> InlineKeyboardMa
     return builder.as_markup()
 
 
-def skip_keyboard() -> InlineKeyboardMarkup:
+def skip_keyboard(callback_data: str = "skip_comment") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="⏭ Пропустить", callback_data="skip_comment")
+    builder.button(text="⏭ Пропустить", callback_data=callback_data)
     builder.button(text="❌ Отмена", callback_data="cancel")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def done_photos_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Готово", callback_data="photos_done")
+    builder.button(text="⏭ Без фото", callback_data="photos_done")
     builder.adjust(2)
     return builder.as_markup()
 

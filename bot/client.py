@@ -84,6 +84,7 @@ class APIClient:
         score_privacy: int,
         score_vibe: int,
         comment: str | None = None,
+        photos: list[str] | None = None,
     ) -> dict:
         return await self._request(
             "POST", "/api/v1/reviews",
@@ -96,6 +97,7 @@ class APIClient:
                 "score_privacy": score_privacy,
                 "score_vibe": score_vibe,
                 "comment": comment,
+                "photos": photos or [],
             },
         )
 
