@@ -27,12 +27,15 @@ CRITERION_NAMES = {
 
 @router.callback_query(F.data == "top_menu")
 async def show_top_menu(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(
-        "📊 <b>Топы туалетов</b>\n\n"
-        "Выбери критерий по которому хочешь посмотреть рейтинг:",
-        reply_markup=top_menu(),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "📊 <b>Топы туалетов</b>\n\n"
+            "Выбери критерий по которому хочешь посмотреть рейтинг:",
+            reply_markup=top_menu(),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 

@@ -27,13 +27,18 @@ class APIClient:
         **kwargs,
     ) -> Any:
         url = f"{self.base_url}{path}"
-        async with aiohttp.ClientSession() as session:
-            async with session.request(method, url, headers=self.headers, **kwargs) as resp:
-                data = await resp.json()
-                if resp.status >= 400:
-                    detail = data.get("detail", "Неизвестная ошибка")
-                    raise RuntimeError(detail)
-                return data
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, url, headers=self.headers, **kwargs) as resp:
+                    data = await resp.json(content_type=None)
+                    if resp.status >= 400:
+                        detail = data.get("detail", "Неизвестная ошибка") if isinstance(data, dict) else "Ошибка сервера"
+                        raise RuntimeError(detail)
+                    return data
+        except RuntimeError:
+            raise
+        except Exception as e:
+            raise RuntimeError("Ошибка соединения с сервером") from e
 
     # ── Users ──────────────────────────────────────────────────────────────
 
@@ -120,6 +125,9 @@ class APIClient:
         if year and month:
             params = f"?year={year}&month={month}"
         return await self._request("GET", f"/api/v1/top/month{params}")
+
+    async def get_token_top(self, limit: int = 10) -> list:
+        return await self._request("GET", f"/api/v1/users/tokens/top?limit={limit}")
 
     async def get_month_history(self, limit: int = 12) -> list:
         return await self._request("GET", f"/api/v1/top/month/history?limit={limit}")

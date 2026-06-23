@@ -7,9 +7,23 @@ def main_menu(is_moderator: bool = False) -> InlineKeyboardMarkup:
     builder.button(text="🚽 Оценить туалет", callback_data="review_start")
     builder.button(text="🏆 Топ туалетов", callback_data="top_menu")
     builder.button(text="📅 Туалет месяца", callback_data="toilet_of_month")
+    builder.button(text="💰 Токены", callback_data="tokens_balance")
     if is_moderator:
         builder.button(text="⚙️ Модератор", callback_data="admin_menu")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def tokens_menu(active: str = "balance") -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    balance_text = "▶ 💰 Мой баланс" if active == "balance" else "💰 Мой баланс"
+    top_text = "▶ 🏆 Топ" if active == "top" else "🏆 Топ"
+    info_text = "▶ 📖 Механика" if active == "info" else "📖 Механика"
+    builder.button(text=balance_text, callback_data="tokens_balance")
+    builder.button(text=top_text, callback_data="tokens_top")
+    builder.button(text=info_text, callback_data="tokens_info")
+    builder.button(text="◀️ Назад", callback_data="main_menu")
+    builder.adjust(3, 1)
     return builder.as_markup()
 
 

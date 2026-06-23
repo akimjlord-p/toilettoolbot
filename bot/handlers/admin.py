@@ -15,12 +15,15 @@ router = Router()
 @router.callback_query(F.data == "admin_menu")
 async def show_admin_menu(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.edit_text(
-        "⚙️ <b>Панель модератора</b>\n\n"
-        "Выбери действие:",
-        reply_markup=admin_menu(),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "⚙️ <b>Панель модератора</b>\n\n"
+            "Выбери действие:",
+            reply_markup=admin_menu(),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 

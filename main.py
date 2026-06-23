@@ -6,7 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from bot.handlers import admin, review, start, top
+from bot.handlers import admin, review, start, tokens, top
 from config import settings
 
 logging.basicConfig(
@@ -28,6 +28,7 @@ async def main() -> None:
     dp.include_router(start.router)
     dp.include_router(review.router)
     dp.include_router(top.router)
+    dp.include_router(tokens.router)
     dp.include_router(admin.router)
 
     logger.info("Bot started")

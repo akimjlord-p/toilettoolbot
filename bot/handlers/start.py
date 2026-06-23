@@ -71,7 +71,10 @@ async def back_to_main(callback: CallbackQuery, state: FSMContext) -> None:
         f"Выбирай:"
     )
 
-    await callback.message.edit_text(text, reply_markup=main_menu(is_moderator), parse_mode="HTML")
+    try:
+        await callback.message.edit_text(text, reply_markup=main_menu(is_moderator), parse_mode="HTML")
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -90,8 +93,11 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext) -> None:
     except RuntimeError:
         is_moderator = False
 
-    await callback.message.edit_text(
-        "❌ Действие отменено.\n\nВыбирай:",
-        reply_markup=main_menu(is_moderator),
-    )
+    try:
+        await callback.message.edit_text(
+            "❌ Действие отменено.\n\nВыбирай:",
+            reply_markup=main_menu(is_moderator),
+        )
+    except Exception:
+        pass
     await callback.answer()
