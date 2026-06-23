@@ -1,3 +1,5 @@
+import html
+
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
@@ -66,7 +68,7 @@ async def show_balance(callback: CallbackQuery):
     balance = user.get("balance", 0)
     rank = _get_rank(balance)
     next_info = _next_rank(balance)
-    nickname = user.get("nickname") or callback.from_user.first_name or "Аноним"
+    nickname = html.escape(user.get("nickname") or callback.from_user.first_name or "Аноним")
 
     text = (
         f"💰 <b>Мои токены</b>\n\n"
@@ -107,7 +109,7 @@ async def show_top(callback: CallbackQuery):
         for entry in top:
             rank = entry["rank"]
             medal = medals.get(rank, f"{rank}.")
-            name = entry.get("nickname") or entry.get("username") or "Аноним"
+            name = html.escape(entry.get("nickname") or entry.get("username") or "Аноним")
             balance = entry["balance"]
             title = _get_rank(balance)
             lines.append(f"{medal} <b>{name}</b> — {balance} токенов\n   {title}")

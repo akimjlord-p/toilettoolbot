@@ -1,3 +1,5 @@
+import html
+
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
@@ -7,6 +9,7 @@ from bot.client import APIClient
 from bot.keyboards.inline import main_menu
 
 router = Router()
+fallback_router = Router()
 
 
 @router.message(CommandStart())
@@ -29,9 +32,9 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     nickname = user.get("nickname")
 
     if nickname:
-        display = f"<b>{nickname}</b>"
+        display = f"<b>{html.escape(nickname)}</b>"
     else:
-        display = f"<b>{name}</b>"
+        display = f"<b>{html.escape(name)}</b>"
 
     text = (
         f"🚽 Привет, {display}!\n\n"
@@ -48,6 +51,10 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "main_menu")
 async def back_to_main(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer("Сообщение устарело. Отправь /start", show_alert=True)
+        return
+
     await state.clear()
 
     client = APIClient(
@@ -64,7 +71,7 @@ async def back_to_main(callback: CallbackQuery, state: FSMContext) -> None:
     is_moderator = user.get("is_moderator", False)
     nickname = user.get("nickname")
     name = callback.from_user.first_name or "друг"
-    display = f"<b>{nickname}</b>" if nickname else f"<b>{name}</b>"
+    display = f"<b>{html.escape(nickname)}</b>" if nickname else f"<b>{html.escape(name)}</b>"
 
     text = (
         f"🏠 Главное меню, {display}\n\n"
@@ -80,6 +87,10 @@ async def back_to_main(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "cancel")
 async def cancel_action(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer("Сообщение устарело. Отправь /start", show_alert=True)
+        return
+
     await state.clear()
 
     client = APIClient(
@@ -101,3 +112,10 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext) -> None:
     except Exception:
         pass
     await callback.answer()
+
+
+@fallback_router.callback_query()
+async def stale_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    """Ловит все необработанные callback'и (устаревшие кнопки после рестарта)."""
+    await state.clear()
+    await callback.answer("Бот был перезапущен. Отправь /start чтобы продолжить", show_alert=True)

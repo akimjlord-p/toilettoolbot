@@ -1,3 +1,5 @@
+import html
+
 from aiogram import Bot
 
 from config import settings
@@ -19,7 +21,7 @@ async def broadcast(bot: Bot, text: str) -> None:
 async def broadcast_toilet_of_month(bot: Bot, record: dict) -> None:
     """Опубликовать туалет месяца в канал."""
     toilet = record["toilet"]
-    title = toilet.get("name") or toilet["address"]
+    title = html.escape(toilet.get("name") or toilet["address"])
     month_name = MONTH_NAMES.get(record["month"], str(record["month"]))
     ai_comment = record.get("ai_comment", "")
 
@@ -29,7 +31,7 @@ async def broadcast_toilet_of_month(bot: Bot, record: dict) -> None:
         f"📊 Средний балл: <b>{record['avg_score']} / 90</b>\n\n"
     )
     if ai_comment:
-        text += f"💬 {ai_comment}\n"
+        text += f"💬 {html.escape(ai_comment)}\n"
 
     await broadcast(bot, text)
 
@@ -51,13 +53,12 @@ async def broadcast_top(bot: Bot, criterion: str, top: list[dict]) -> None:
     medals = ["🥇", "🥈", "🥉"]
     for i, entry in enumerate(top[:10]):
         toilet = entry["toilet"]
-        name = toilet.get("name") or toilet["address"]
+        name = html.escape(toilet.get("name") or toilet["address"])
         medal = medals[i] if i < 3 else f"{i + 1}."
         lines.append(f"{medal} {name} — <b>{entry['avg_score']}</b> ({entry['review_count']} отзывов)")
 
     text = "\n".join(lines)
 
-    # Фото победителя (первое место)
     winner_photos = top[0].get("photos", []) if top else []
     if winner_photos and settings.channel_id:
         from aiogram.types import InputMediaPhoto
@@ -75,7 +76,7 @@ async def broadcast_toilet_of_month_with_photos(bot: Bot, record: dict, photos: 
     """Туалет месяца с фото."""
     from aiogram.types import InputMediaPhoto
     toilet = record["toilet"]
-    title = toilet.get("name") or toilet["address"]
+    title = html.escape(toilet.get("name") or toilet["address"])
     month_name = MONTH_NAMES.get(record["month"], str(record["month"]))
     ai_comment = record.get("ai_comment", "")
 
@@ -85,7 +86,7 @@ async def broadcast_toilet_of_month_with_photos(bot: Bot, record: dict, photos: 
         f"📊 Средний балл: <b>{record['avg_score']} / 90</b>\n\n"
     )
     if ai_comment:
-        text += f"💬 {ai_comment}\n"
+        text += f"💬 {html.escape(ai_comment)}\n"
 
     if not settings.channel_id:
         return

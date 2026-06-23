@@ -7,6 +7,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from bot.handlers import admin, review, start, tokens, top
+from bot.handlers.start import fallback_router
 from config import settings
 
 logging.basicConfig(
@@ -30,6 +31,7 @@ async def main() -> None:
     dp.include_router(top.router)
     dp.include_router(tokens.router)
     dp.include_router(admin.router)
+    dp.include_router(fallback_router)  # must be last
 
     logger.info("Bot started")
     await bot.delete_webhook(drop_pending_updates=True)

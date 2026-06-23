@@ -1,3 +1,5 @@
+import html
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -20,14 +22,20 @@ router = Router()
 
 @router.callback_query(F.data == "review_start")
 async def review_start(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer()
+        return
     await state.set_state(ReviewStates.waiting_address)
-    await callback.message.edit_text(
-        "📍 <b>Шаг 1 из 3 — Найди туалет</b>\n\n"
-        "Введи адрес туалета который хочешь оценить.\n"
-        "Можно написать частично — например: <i>ул. Ленина</i> или <i>ТЦ Мега</i>",
-        reply_markup=back_button("main_menu"),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "📍 <b>Шаг 1 из 3 — Найди туалет</b>\n\n"
+            "Введи адрес туалета который хочешь оценить.\n"
+            "Можно написать частично — например: <i>ул. Ленина</i> или <i>ТЦ Мега</i>",
+            reply_markup=back_button("main_menu"),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -47,7 +55,6 @@ async def process_address(message: Message, state: FSMContext) -> None:
     found = result.get("found", [])
     needs_creation = result.get("needs_creation", True)
 
-    # Сохраняем нормализованный адрес и координаты от геокодера
     normalized = result.get("normalized_address") or query
     lat = result.get("lat")
     lon = result.get("lon")
@@ -56,7 +63,7 @@ async def process_address(message: Message, state: FSMContext) -> None:
         await state.set_state(ReviewStates.waiting_toilet_confirm)
         await state.update_data(address=normalized, lat=lat, lon=lon, found_toilets=found)
 
-        geo_hint = f"\n<i>📍 Геокодер: {normalized}</i>" if normalized != query else ""
+        geo_hint = f"\n<i>📍 Геокодер: {html.escape(normalized)}</i>" if normalized != query else ""
         await message.answer(
             f"🔍 Нашёл <b>{len(found)}</b> совпадений.{geo_hint}\n\n"
             f"Выбери нужный туалет или добавь новый:",
@@ -66,7 +73,7 @@ async def process_address(message: Message, state: FSMContext) -> None:
     else:
         await state.update_data(address=normalized, lat=lat, lon=lon)
 
-        geo_hint = f"<i>📍 Геокодер определил: {normalized}</i>\n\n" if normalized != query else ""
+        geo_hint = f"<i>📍 Геокодер определил: {html.escape(normalized)}</i>\n\n" if normalized != query else ""
         await message.answer(
             f"🆕 Туалетов рядом с этим адресом ещё нет в базе.\n\n"
             f"{geo_hint}"
@@ -80,6 +87,10 @@ async def process_address(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith("toilet_select:"), ReviewStates.waiting_toilet_confirm)
 async def toilet_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer()
+        return
+
     toilet_id = callback.data.split(":")[1]
     client = APIClient(callback.from_user.id, callback.from_user.username)
 
@@ -102,13 +113,16 @@ async def toilet_selected(callback: CallbackQuery, state: FSMContext) -> None:
         score_text = "📊 Отзывов пока нет — будь первым!"
 
     await state.update_data(toilet_id=toilet_id, toilet_title=title)
-    await callback.message.edit_text(
-        f"🚽 <b>{title}</b>\n\n"
-        f"{score_text}\n\n"
-        f"Оценить этот туалет?",
-        reply_markup=confirm_keyboard(yes_data="review_begin", no_data="main_menu"),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"🚽 <b>{html.escape(title)}</b>\n\n"
+            f"{score_text}\n\n"
+            f"Оценить этот туалет?",
+            reply_markup=confirm_keyboard(yes_data="review_begin", no_data="main_menu"),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -116,6 +130,10 @@ async def toilet_selected(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "toilet_create_new")
 async def toilet_create_new(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer()
+        return
+
     data = await state.get_data()
     address = data.get("address", "")
 
@@ -133,12 +151,15 @@ async def toilet_create_new(callback: CallbackQuery, state: FSMContext) -> None:
     title = toilet.get("name") or toilet["address"]
     await state.update_data(toilet_id=toilet["id"], toilet_title=title)
 
-    await callback.message.edit_text(
-        f"✅ Туалет <b>«{title}»</b> добавлен в базу!\n\n"
-        f"Теперь оцени его — начнём анкету?",
-        reply_markup=confirm_keyboard(yes_data="review_begin", no_data="main_menu"),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Туалет <b>«{html.escape(title)}»</b> добавлен в базу!\n\n"
+            f"Теперь оцени его — начнём анкету?",
+            reply_markup=confirm_keyboard(yes_data="review_begin", no_data="main_menu"),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -146,14 +167,20 @@ async def toilet_create_new(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "review_begin")
 async def review_begin(callback: CallbackQuery, state: FSMContext) -> None:
+    if not callback.message:
+        await callback.answer()
+        return
     await state.set_state(ReviewStates.score_cleanliness)
-    await callback.message.edit_text(
-        "📋 <b>Шаг 2 из 3 — Анкета</b>\n\n"
-        "🧹 <b>Чистота</b> — пол, стены, раковины, зеркала, унитазы\n\n"
-        "Оцени от 0 до 25:",
-        reply_markup=score_keyboard(max_score=25, step=5),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "📋 <b>Шаг 2 из 3 — Анкета</b>\n\n"
+            "🧹 <b>Чистота</b> — пол, стены, раковины, зеркала, унитазы\n\n"
+            "Оцени от 0 до 25:",
+            reply_markup=score_keyboard(max_score=25, step=5),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -164,13 +191,16 @@ async def score_cleanliness(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_cleanliness=score)
     await state.set_state(ReviewStates.score_supplies)
-    await callback.message.edit_text(
-        f"✅ Чистота: <b>{score}/25</b>\n\n"
-        f"🧴 <b>Расходники</b> — туалетная бумага, мыло, сушилка или бумажные полотенца\n\n"
-        f"Оцени от 0 до 20:",
-        reply_markup=score_keyboard(max_score=20, step=4),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Чистота: <b>{score}/25</b>\n\n"
+            f"🧴 <b>Расходники</b> — туалетная бумага, мыло, сушилка или бумажные полотенца\n\n"
+            f"Оцени от 0 до 20:",
+            reply_markup=score_keyboard(max_score=20, step=4),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -181,13 +211,16 @@ async def score_supplies(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_supplies=score)
     await state.set_state(ReviewStates.score_smell)
-    await callback.message.edit_text(
-        f"✅ Расходники: <b>{score}/20</b>\n\n"
-        f"💨 <b>Запах</b> — отсутствие неприятного запаха, вентиляция\n\n"
-        f"Оцени от 0 до 20:",
-        reply_markup=score_keyboard(max_score=20, step=4),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Расходники: <b>{score}/20</b>\n\n"
+            f"💨 <b>Запах</b> — отсутствие неприятного запаха, вентиляция\n\n"
+            f"Оцени от 0 до 20:",
+            reply_markup=score_keyboard(max_score=20, step=4),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -198,13 +231,16 @@ async def score_smell(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_smell=score)
     await state.set_state(ReviewStates.score_equipment)
-    await callback.message.edit_text(
-        f"✅ Запах: <b>{score}/20</b>\n\n"
-        f"🔧 <b>Оборудование</b> — работающий слив, краны, замки на кабинках, освещение\n\n"
-        f"Оцени от 0 до 15:",
-        reply_markup=score_keyboard(max_score=15, step=3),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Запах: <b>{score}/20</b>\n\n"
+            f"🔧 <b>Оборудование</b> — работающий слив, краны, замки на кабинках, освещение\n\n"
+            f"Оцени от 0 до 15:",
+            reply_markup=score_keyboard(max_score=15, step=3),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -215,13 +251,16 @@ async def score_equipment(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_equipment=score)
     await state.set_state(ReviewStates.score_privacy)
-    await callback.message.edit_text(
-        f"✅ Оборудование: <b>{score}/15</b>\n\n"
-        f"🚪 <b>Приватность</b> — целые двери, нормальные замки, перегородки\n\n"
-        f"Оцени от 0 до 5:",
-        reply_markup=score_keyboard(max_score=5, step=1),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Оборудование: <b>{score}/15</b>\n\n"
+            f"🚪 <b>Приватность</b> — целые двери, нормальные замки, перегородки\n\n"
+            f"Оцени от 0 до 5:",
+            reply_markup=score_keyboard(max_score=5, step=1),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -232,13 +271,16 @@ async def score_privacy(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_privacy=score)
     await state.set_state(ReviewStates.score_vibe)
-    await callback.message.edit_text(
-        f"✅ Приватность: <b>{score}/5</b>\n\n"
-        f"✨ <b>Общий вайб</b> — твоё субъективное впечатление. Хочется ли вернуться?\n\n"
-        f"Оцени от 0 до 5:",
-        reply_markup=score_keyboard(max_score=5, step=1),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Приватность: <b>{score}/5</b>\n\n"
+            f"✨ <b>Общий вайб</b> — твоё субъективное впечатление. Хочется ли вернуться?\n\n"
+            f"Оцени от 0 до 5:",
+            reply_markup=score_keyboard(max_score=5, step=1),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -249,13 +291,16 @@ async def score_vibe(callback: CallbackQuery, state: FSMContext) -> None:
     score = int(callback.data.split(":")[1])
     await state.update_data(score_vibe=score)
     await state.set_state(ReviewStates.comment)
-    await callback.message.edit_text(
-        f"✅ Вайб: <b>{score}/5</b>\n\n"
-        f"💬 <b>Шаг 3 из 4 — Комментарий</b>\n\n"
-        f"Напиши что-нибудь об этом туалете или пропусти:",
-        reply_markup=skip_keyboard(),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            f"✅ Вайб: <b>{score}/5</b>\n\n"
+            f"💬 <b>Шаг 3 из 4 — Комментарий</b>\n\n"
+            f"Напиши что-нибудь об этом туалете или пропусти:",
+            reply_markup=skip_keyboard(),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
     await callback.answer()
 
 
@@ -299,7 +344,6 @@ async def process_photo(message: Message, state: FSMContext) -> None:
         await message.answer("⚠️ Максимум 3 фото. Нажми <b>Готово</b>.", parse_mode="HTML")
         return
 
-    # Берём самое большое разрешение
     file_id = message.photo[-1].file_id
     photos.append(file_id)
     await state.update_data(photos=photos)
@@ -354,7 +398,6 @@ async def _submit_review(
     title = data.get("toilet_title", "туалет")
     total = review["total_score"]
 
-    # Эмодзи в зависимости от итогового балла
     if total >= 75:
         grade = "🏆 Отличный туалет!"
     elif total >= 50:
@@ -375,7 +418,7 @@ async def _submit_review(
 
     text = (
         f"✅ <b>Отзыв сохранён!</b>\n\n"
-        f"📍 {title}\n"
+        f"📍 {html.escape(title)}\n"
         f"━━━━━━━━━━━━━━\n"
         f"{scores}\n"
         f"━━━━━━━━━━━━━━\n"
@@ -383,7 +426,7 @@ async def _submit_review(
         f"{grade}"
     )
     if data.get("comment"):
-        text += f"\n\n💬 «{data['comment']}»"
+        text += f"\n\n💬 «{html.escape(data['comment'])}»"
 
     try:
         user = await client.get_me()
